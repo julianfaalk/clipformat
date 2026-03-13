@@ -30,8 +30,8 @@ struct SettingsView: View {
             Section {
                 LaunchAtLoginToggle()
 
-                Toggle("Auto-detect Markdown", isOn: $prefs.autoDetectMarkdown)
-                    .help("Skip conversion if clipboard doesn't look like Markdown.")
+                Toggle("Skip plain text (no formatting)", isOn: $prefs.autoDetectMarkdown)
+                    .help("If the clipboard is plain text without Markdown or rich formatting, skip conversion and leave it as-is.")
 
                 Toggle("Preview before copying", isOn: $prefs.showPreview)
                     .help("Show a preview window to confirm before the clipboard is replaced.")
@@ -52,13 +52,14 @@ struct SettingsView: View {
             }
 
             Section {
-                AppCompatRow(icon: "doc.richtext",   label: "RTF",        apps: "Word, Pages, Notes, Mail, Outlook, Slack")
-                AppCompatRow(icon: "globe",          label: "HTML",       apps: "Notion, Google Docs, Linear, Confluence, Coda")
-                AppCompatRow(icon: "text.alignleft", label: "Plain text", apps: "VS Code, Terminal, Discord, all text fields")
+                SourceRow(icon: "globe",           label: "Browser copy",  desc: "ChatGPT, Claude.ai, Notion, Google Docs → HTML stripped & normalized")
+                SourceRow(icon: "doc.richtext",    label: "Rich text",     desc: "Word, Pages, Mail, TextEdit → RTF read, HTML generated")
+                SourceRow(icon: "chevron.left.forwardslash.chevron.right", label: "Markdown", desc: "Plain text with ** / # / ``` → parsed to HTML + RTF")
+                SourceRow(icon: "text.alignleft",  label: "Plain text",    desc: "Normalized, written in all formats for maximum compat")
             } header: {
-                Text("Output formats (written simultaneously)")
+                Text("Source detection (auto)")
             } footer: {
-                Text("The target app automatically picks the richest format it supports.")
+                Text("⌥⌘C reads whatever's on the clipboard and converts it to RTF + HTML + plain text simultaneously.")
                     .foregroundStyle(.tertiary)
             }
 
@@ -104,6 +105,24 @@ struct AppCompatRow: View {
                 Text(apps).foregroundStyle(.secondary).font(.caption)
             }
         }
+    }
+}
+
+struct SourceRow: View {
+    let icon: String
+    let label: String
+    let desc: String
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .foregroundStyle(.blue)
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label).font(.body)
+                Text(desc).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 
