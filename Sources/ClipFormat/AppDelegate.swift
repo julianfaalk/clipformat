@@ -42,6 +42,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         convertItem.target = self
         menu.addItem(convertItem)
 
+        let stripItem = NSMenuItem(
+            title: "Strip Formatting (plain text)  ⌥⌘X",
+            action: #selector(stripFormatting),
+            keyEquivalent: ""
+        )
+        stripItem.target = self
+        menu.addItem(stripItem)
+
         menu.addItem(.separator())
 
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
@@ -66,6 +74,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager.register()
         hotkeyManager.onActivate = { [weak self] in
             self?.convertClipboard()
+        }
+
+        // Second hotkey: ⌥⌘X for strip formatting
+        hotkeyManager.registerSecondary(keyCode: 7) // X
+        hotkeyManager.onSecondaryActivate = { [weak self] in
+            self?.stripFormatting()
         }
     }
 
@@ -132,6 +146,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         content.body = body
         let req = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+    }
+
+    // MARK: - Strip Formatting
+
+    @objc func stripFormatting() {
+        let pasteboard = NSPasteboard.general
+        guard let text = pasteboard.string(forType: .string), !text.isEmpty else {
+            flash(symbol: "exclamationmark.triangle", label: "⚠️ Empty", duration: 2)
+            return
+        }
+        let stripped = MarkdownStripper.strip(text)
+        pasteboard.clearContents()
+        pasteboard.setString(stripped, forType: .string)
+        flash(symbol: "text.alignleft", label: "Plain ✓", duration: 2)
+        if prefs.playSound { NSSound(named: .init("Tink"))?.play() }
     }
 
     // MARK: - Settings

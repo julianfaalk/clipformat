@@ -7,9 +7,11 @@ final class HotkeyManager {
     static let shared = HotkeyManager()
 
     private var hotKeyRef: EventHotKeyRef?
+    private var hotKeyRef2: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
 
     var onActivate: (() -> Void)?
+    var onSecondaryActivate: (() -> Void)?
 
     private init() {
         installEventHandler()
@@ -39,6 +41,13 @@ final class HotkeyManager {
         }
     }
 
+    /// Register a secondary hotkey (⌥⌘ + keyCode).
+    func registerSecondary(keyCode: UInt32, modifiers: UInt32 = UInt32(cmdKey | optionKey)) {
+        if let ref = hotKeyRef2 { UnregisterEventHotKey(ref); hotKeyRef2 = nil }
+        var id = EventHotKeyID(signature: OSType(0x434C4651), id: 2) // 'CLFQ'
+        RegisterEventHotKey(keyCode, modifiers, id, GetApplicationEventTarget(), 0, &hotKeyRef2)
+    }
+
     private func installEventHandler() {
         var eventSpec = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
@@ -49,10 +58,19 @@ final class HotkeyManager {
 
         InstallEventHandler(
             GetApplicationEventTarget(),
-            { _, _, userData -> OSStatus in
-                guard let ptr = userData else { return noErr }
+            { _, event, userData -> OSStatus in
+                guard let ptr = userData, let event = event else { return noErr }
                 let mgr = Unmanaged<HotkeyManager>.fromOpaque(ptr).takeUnretainedValue()
-                DispatchQueue.main.async { mgr.onActivate?() }
+
+                var hkID = EventHotKeyID()
+                GetEventParameter(event, EventParamName(kEventParamDirectObject),
+                                  EventParamType(typeEventHotKeyID), nil,
+                                  MemoryLayout<EventHotKeyID>.size, nil, &hkID)
+
+                DispatchQueue.main.async {
+                    if hkID.id == 1 { mgr.onActivate?() }
+                    else if hkID.id == 2 { mgr.onSecondaryActivate?() }
+                }
                 return noErr
             },
             1,
@@ -63,7 +81,8 @@ final class HotkeyManager {
     }
 
     deinit {
-        if let ref = hotKeyRef { UnregisterEventHotKey(ref) }
+        if let ref = hotKeyRef  { UnregisterEventHotKey(ref) }
+        if let ref = hotKeyRef2 { UnregisterEventHotKey(ref) }
         if let ref = eventHandlerRef { RemoveEventHandler(ref) }
     }
 }
