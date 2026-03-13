@@ -44,22 +44,21 @@ struct SettingsView: View {
             }
 
             Section {
-                LabeledContent("Rich text (RTF)") {
-                    Text("Word, Pages, Notes, Mail, Outlook, Slack")
-                        .foregroundStyle(.secondary).font(.caption)
-                }
-                LabeledContent("HTML") {
-                    Text("Notion, Google Docs, Linear, Confluence")
-                        .foregroundStyle(.secondary).font(.caption)
-                }
-                LabeledContent("Plain text") {
-                    Text("VS Code, Terminal, Discord, any text field")
-                        .foregroundStyle(.secondary).font(.caption)
-                }
+                ShortcutRow(keys: ["⌥", "⌘", "C"], label: "Convert Clipboard")
+                ShortcutRow(keys: ["⌥", "⌘", "X"], label: "Strip to Plain Text")
+                ShortcutRow(keys: ["⌘", ","],        label: "Open Settings")
             } header: {
-                Text("Supported output formats")
+                Text("Shortcuts")
+            }
+
+            Section {
+                AppCompatRow(icon: "doc.richtext",   label: "RTF",        apps: "Word, Pages, Notes, Mail, Outlook, Slack")
+                AppCompatRow(icon: "globe",          label: "HTML",       apps: "Notion, Google Docs, Linear, Confluence, Coda")
+                AppCompatRow(icon: "text.alignleft", label: "Plain text", apps: "VS Code, Terminal, Discord, all text fields")
+            } header: {
+                Text("Output formats (written simultaneously)")
             } footer: {
-                Text("ClipFormat writes all three formats at once. The target app picks the richest one it supports.")
+                Text("The target app automatically picks the richest format it supports.")
                     .foregroundStyle(.tertiary)
             }
 
@@ -73,6 +72,38 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 440)
         .padding(.vertical, 8)
+    }
+}
+
+struct ShortcutRow: View {
+    let keys: [String]
+    let label: String
+    var body: some View {
+        LabeledContent(label) {
+            HStack(spacing: 3) {
+                ForEach(keys, id: \.self) { key in
+                    Text(key)
+                        .font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+                }
+            }
+        }
+    }
+}
+
+struct AppCompatRow: View {
+    let icon: String
+    let label: String
+    let apps: String
+    var body: some View {
+        LabeledContent(label) {
+            HStack(spacing: 6) {
+                Image(systemName: icon).foregroundStyle(.secondary)
+                Text(apps).foregroundStyle(.secondary).font(.caption)
+            }
+        }
     }
 }
 
