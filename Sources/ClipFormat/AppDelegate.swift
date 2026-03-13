@@ -50,6 +50,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         stripItem.target = self
         menu.addItem(stripItem)
 
+        // History submenu
+        let history = ClipboardHistory.shared.entries
+        if !history.isEmpty {
+            let historyItem = NSMenuItem(title: "Recent Conversions", action: nil, keyEquivalent: "")
+            let sub = NSMenu()
+            for (idx, entry) in history.enumerated() {
+                let item = NSMenuItem(
+                    title: entry.preview,
+                    action: #selector(restoreHistory(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.tag = idx
+                let df = DateFormatter()
+                df.timeStyle = .short
+                item.toolTip = df.string(from: entry.date)
+                sub.addItem(item)
+            }
+            historyItem.submenu = sub
+            menu.addItem(historyItem)
+        }
+
         menu.addItem(.separator())
 
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
@@ -108,6 +130,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         PasteboardWriter.write(html: html, attributed: attributed, plain: text)
+        ClipboardHistory.shared.add(original: text, html: html)
+        rebuildMenu()
 
         flash(symbol: "checkmark.circle.fill", label: "✅", duration: 2)
         notify(title: "ClipFormat", body: "Clipboard formatted — press ⌘V to paste.")
@@ -146,6 +170,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         content.body = body
         let req = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+    }
+
+    // MARK: - History
+
+    @objc func restoreHistory(_ sender: NSMenuItem) {
+        let entries = ClipboardHistory.shared.entries
+        guard sender.tag < entries.count else { return }
+        ClipboardHistory.shared.restore(entries[sender.tag])
+        flash(symbol: "clock.arrow.circlepath", label: "↩︎ Restored", duration: 2)
+        if prefs.playSound { NSSound(named: .init("Pop"))?.play() }
     }
 
     // MARK: - Strip Formatting
