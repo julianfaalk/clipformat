@@ -129,6 +129,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        // Preview mode: show window, let user confirm
+        if prefs.showPreview {
+            PreviewWindowController.show(original: text, html: html) { [weak self] in
+                guard let self else { return }
+                PasteboardWriter.write(html: html, attributed: attributed, plain: text)
+                ClipboardHistory.shared.add(original: text, html: html)
+                self.rebuildMenu()
+                self.flash(symbol: "checkmark.circle.fill", label: "✅", duration: 2)
+                if self.prefs.playSound { NSSound(named: .init("Pop"))?.play() }
+            }
+            return
+        }
+
         PasteboardWriter.write(html: html, attributed: attributed, plain: text)
         ClipboardHistory.shared.add(original: text, html: html)
         rebuildMenu()

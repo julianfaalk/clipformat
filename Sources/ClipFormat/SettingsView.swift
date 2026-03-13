@@ -33,6 +33,9 @@ struct SettingsView: View {
                 Toggle("Auto-detect Markdown", isOn: $prefs.autoDetectMarkdown)
                     .help("Skip conversion if clipboard doesn't look like Markdown.")
 
+                Toggle("Preview before copying", isOn: $prefs.showPreview)
+                    .help("Show a preview window to confirm before the clipboard is replaced.")
+
                 Toggle("Play sound on convert", isOn: $prefs.playSound)
 
                 Toggle("Show notification after convert", isOn: $prefs.showNotification)

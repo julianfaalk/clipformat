@@ -16,6 +16,10 @@ final class PreferencesManager: ObservableObject {
         didSet { UserDefaults.standard.set(showNotification, forKey: Keys.notification) }
     }
 
+    @Published var showPreview: Bool {
+        didSet { UserDefaults.standard.set(showPreview, forKey: Keys.preview) }
+    }
+
     var shortcutLabel: String { "⌥⌘C" }
 
     var launchAtLogin: Bool {
@@ -27,6 +31,7 @@ final class PreferencesManager: ObservableObject {
         static let autoDetect   = "cf_autoDetectMarkdown"
         static let sound        = "cf_playSound"
         static let notification = "cf_showNotification"
+        static let preview      = "cf_showPreview"
     }
 
     private init() {
@@ -34,9 +39,11 @@ final class PreferencesManager: ObservableObject {
             Keys.autoDetect:   true,
             Keys.sound:        true,
             Keys.notification: true,
+            Keys.preview:      false,
         ])
         self.autoDetectMarkdown = UserDefaults.standard.bool(forKey: Keys.autoDetect)
         self.playSound          = UserDefaults.standard.bool(forKey: Keys.sound)
         self.showNotification   = UserDefaults.standard.bool(forKey: Keys.notification)
+        self.showPreview        = UserDefaults.standard.bool(forKey: Keys.preview)
     }
 }
