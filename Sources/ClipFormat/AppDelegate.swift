@@ -15,6 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupMenuBar()
         setupHotkey()
         requestNotificationPermission()
+        OnboardingWindowController.showIfNeeded()
     }
 
     // MARK: - Menu Bar
