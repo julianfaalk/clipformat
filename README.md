@@ -1,23 +1,32 @@
 # ClipFormat
 
-**Copy from ChatGPT / Claude / Gemini → press ⌥⌘C → paste beautifully formatted text in any app.**
+**Copy from app A → press ⌥⌘C → paste perfectly formatted in app B. Every time.**
 
 ---
 
 ## The Problem
 
-AI tools output Markdown. When you paste into Word, Notion, Google Docs, Notes, Mail — you get raw symbols like `**bold**` instead of **bold**, `# Header` instead of a real header.
+Copying between apps breaks formatting. AI tools give you raw Markdown. Browser copies lose their styling in Word. RTF from Pages won't paste into Notion. Every app speaks a different clipboard dialect.
 
 ## The Fix
 
-ClipFormat lives in your menu bar. One shortcut converts the Markdown on your clipboard to rich text. Then you paste normally.
+ClipFormat is a universal clipboard format merger. It reads whatever's on your clipboard, normalizes it, and writes RTF + HTML + plain text simultaneously — so every target app gets the richest format it supports.
 
 ## How It Works
 
-1. Copy any AI response (ChatGPT, Claude, Gemini, Perplexity, ...)
+1. Copy from **anywhere** — browser, Word, AI chat, PDF, anything
 2. Press **⌥⌘C** (Option + Command + C)
-3. Menu bar briefly flashes ✅
-4. Press **⌘V** anywhere — fully formatted
+3. ClipFormat auto-detects the source format and normalizes it
+4. Press **⌘V** anywhere — looks identical to the source
+
+### Source detection (automatic)
+
+| What you copied | What ClipFormat does |
+|---|---|
+| Browser (ChatGPT, Claude, Notion...) | Reads HTML, strips noise, converts to RTF |
+| Word / Pages / Mail | Reads RTF, generates HTML |
+| Plain text with Markdown | Parses Markdown → HTML + RTF |
+| Plain text | Normalizes to all formats |
 
 ## App Compatibility
 
