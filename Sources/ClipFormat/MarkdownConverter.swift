@@ -7,28 +7,36 @@ struct MarkdownConverter {
 
     /// Returns true if the string contains Markdown syntax worth converting.
     static func looksLikeMarkdown(_ text: String) -> Bool {
-        let patterns: [String] = [
-            #"^#{1,6} "#,                   // ATX headers
-            #"^={3,}$"#,                    // Setext h1
-            #"^-{3,}$"#,                    // Setext h2 or HR
-            #"\*\*[^*\n]+\*\*"#,           // Bold
-            #"\*[^*\n]+\*"#,               // Italic
-            #"__[^_\n]+__"#,               // Bold underscore
-            #"_[^_\n]+_"#,                 // Italic underscore
-            #"`[^`\n]+`"#,                 // Inline code
-            #"^```"#,                       // Code block
-            #"^\s*[-*+] "#,                // Unordered list
-            #"^\s*\d+\. "#,               // Ordered list
-            #"^\s*- \[[ xX]\]"#,          // Task list
-            #"^\|.+\|"#,                   // Table
-            #"^> "#,                        // Blockquote
-            #"~~[^~\n]+~~"#,               // Strikethrough
-            #"\[[^\]]+\]\([^)]+\)"#,       // Link
+        // Quick character scan first (cheap)
+        let hasMarkdownChars = text.contains("**") || text.contains("##") ||
+            text.contains("```") || text.contains("- ") || text.contains("# ")
+        guard hasMarkdownChars else { return false }
+
+        let linePatterns: [String] = [
+            #"^#{1,6} "#,          // ATX headers
+            #"^={3,}$"#,           // Setext h1
+            #"^-{3,}$"#,           // HR / Setext h2
+            #"^```"#,              // Code block
+            #"^\s*[-*+] "#,        // Unordered list
+            #"^\s*\d+\. "#,        // Ordered list
+            #"^\s*[-*] \[[ xX]\]"#, // Task list
+            #"^\|.+\|"#,           // Table
+            #"^> "#,               // Blockquote
+        ]
+        let anyPatterns: [String] = [
+            #"\*\*[^*\n]+\*\*"#,          // Bold
+            #"__[^_\n]+__"#,              // Bold underscore
+            #"`[^`\n]+`"#,                // Inline code
+            #"~~[^~\n]+~~"#,              // Strikethrough
+            #"\[[^\]]+\]\([^)]+\)"#,      // Link
         ]
         for line in text.components(separatedBy: "\n") {
-            for pattern in patterns {
-                if line.range(of: pattern, options: .regularExpression) != nil { return true }
+            for p in linePatterns {
+                if line.range(of: p, options: [.regularExpression, .anchored]) != nil { return true }
             }
+        }
+        for p in anyPatterns {
+            if text.range(of: p, options: .regularExpression) != nil { return true }
         }
         return false
     }
@@ -184,8 +192,13 @@ struct MarkdownConverter {
                 i += 1; continue
             }
 
-            // ── Blank line ──
-            if trimmed.isEmpty { flush(); out.append("<br>"); i += 1; continue }
+            // ── Blank line (collapse multiple consecutive blank lines into one) ──
+            if trimmed.isEmpty {
+                flush()
+                // Only emit <br> if previous output wasn't already a blank
+                if out.last != "<br>" { out.append("<br>") }
+                i += 1; continue
+            }
 
             // ── Paragraph ──
             flush()
