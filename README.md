@@ -1,23 +1,57 @@
 # ClipFormat
 
-> Copy from ChatGPT / Claude / Gemini → press **⌥⌘C** → paste beautifully formatted text anywhere.
+**Copy from ChatGPT / Claude / Gemini → press ⌥⌘C → paste beautifully formatted text in any app.**
 
-## What it does
+---
 
-AI chat tools copy Markdown (`**bold**`, `# headers`, `- lists`) which looks broken when pasted into Word, Notes, Mail, Slack, Notion, etc.
+## The Problem
 
-ClipFormat sits in your menu bar and converts the Markdown on your clipboard to rich text (RTF) — so when you paste, it looks correct in every app.
+AI tools output Markdown. When you paste into Word, Notion, Google Docs, Notes, Mail — you get raw symbols like `**bold**` instead of **bold**, `# Header` instead of a real header.
 
-## Usage
+## The Fix
 
-1. Copy text from any AI chat (ChatGPT, Claude, Gemini, ...)
+ClipFormat lives in your menu bar. One shortcut converts the Markdown on your clipboard to rich text. Then you paste normally.
+
+## How It Works
+
+1. Copy any AI response (ChatGPT, Claude, Gemini, Perplexity, ...)
 2. Press **⌥⌘C** (Option + Command + C)
-3. Menu bar briefly shows **✅ Formatted!**
-4. Paste normally with **⌘V** — formatted!
+3. Menu bar briefly flashes ✅
+4. Press **⌘V** anywhere — fully formatted
 
-Apps that don't support rich text (terminal, code editors) will automatically fall back to plain text.
+## App Compatibility
 
-## Build & Install
+ClipFormat writes three formats to the clipboard simultaneously. Every app gets what it supports:
+
+| Format | Apps |
+|--------|------|
+| **Rich Text (RTF)** | Word, Pages, Apple Notes, Mail, Outlook, Slack, TextEdit |
+| **HTML** | Notion, Google Docs, Linear, Confluence, Coda, any web editor |
+| **Plain text** | VS Code, Terminal, Discord, any plain-text input |
+
+No configuration needed. It just works.
+
+## Markdown Support
+
+| Syntax | Renders as |
+|--------|-----------|
+| `# H1` `## H2` `### H3` | Headers (with underline style support) |
+| `**bold**` / `__bold__` | **Bold** |
+| `*italic*` / `_italic_` | *Italic* |
+| `***bold italic***` | ***Bold italic*** |
+| `` `inline code` `` | Inline code |
+| ```` ```lang ```` blocks | Syntax-highlighted code blocks |
+| `- item` / `* item` / `+ item` | Unordered lists (nested!) |
+| `1. item` | Ordered lists (nested!) |
+| `- [ ]` / `- [x]` | Task lists with ☐/☑ |
+| `\| col \| col \|` tables | Full HTML tables with header |
+| `> quote` | Blockquotes |
+| `---` | Horizontal rule |
+| `~~strikethrough~~` | ~~Strikethrough~~ |
+| `[text](url)` | Hyperlinks |
+| bare `https://` URLs | Auto-linked |
+
+## Build
 
 ### Requirements
 - macOS 13 (Ventura) or later
@@ -25,30 +59,27 @@ Apps that don't support rich text (terminal, code editors) will automatically fa
 
 ### Steps
 
-1. Clone the repo
-2. Open `Package.swift` in Xcode (File → Open)
-3. Set scheme target to **My Mac**
-4. Product → **Archive**, then Distribute as a direct install
-5. Or just hit **Run** (⌘R) to use it immediately from Xcode
+```bash
+git clone https://github.com/julianfaalk/clipformat
+```
+
+1. Open `Package.swift` in Xcode (File → Open)
+2. Set scheme to **My Mac**
+3. **⌘R** to run immediately, or **Product → Archive** to build a standalone `.app`
 
 ### Run at Login
 
-After building: right-click the `.app` → Open, then add it to **System Settings → General → Login Items**.
+1. Archive → Distribute → Copy App
+2. Move `ClipFormat.app` to `/Applications`
+3. System Settings → General → Login Items → add ClipFormat
 
-## Supported Markdown
+## Settings
 
-| Syntax | Result |
-|---|---|
-| `# H1` `## H2` `### H3` | Headers |
-| `**bold**` | **Bold** |
-| `*italic*` | *Italic* |
-| `` `code` `` | Inline code |
-| ` ``` ` blocks | Code blocks |
-| `- item` / `1. item` | Lists |
-| `[text](url)` | Links |
-| `> quote` | Blockquotes |
-| `---` | Horizontal rule |
-| `~~strike~~` | Strikethrough |
+Click the menu bar icon → **Settings…** to configure:
+
+- Toggle auto-detect (skips conversion if no Markdown found)
+- Toggle sound feedback
+- Toggle macOS notifications
 
 ## License
 

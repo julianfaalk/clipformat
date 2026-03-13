@@ -1,106 +1,142 @@
 import AppKit
 import SwiftUI
+import UserNotifications
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+
     var statusItem: NSStatusItem?
-    var hotkeyMonitor: Any?
+    private let hotkeyManager = HotkeyManager.shared
+    private let prefs = PreferencesManager.shared
+
+    // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Hide from Dock
         NSApp.setActivationPolicy(.accessory)
         setupMenuBar()
         setupHotkey()
+        requestNotificationPermission()
     }
 
     // MARK: - Menu Bar
 
     func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        updateMenuBarIcon(symbolName: "doc.richtext")
+        rebuildMenu()
+    }
 
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "doc.richtext", accessibilityDescription: "ClipFormat")
-        }
-
+    func rebuildMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: "ClipFormat", action: nil, keyEquivalent: "").isEnabled = false
+
+        let titleItem = NSMenuItem(title: "ClipFormat", action: nil, keyEquivalent: "")
+        titleItem.isEnabled = false
+        menu.addItem(titleItem)
         menu.addItem(.separator())
 
-        let convertItem = NSMenuItem(title: "Convert & Format Clipboard  ⌥⌘C", action: #selector(convertClipboard), keyEquivalent: "")
+        let convertItem = NSMenuItem(
+            title: "Convert Clipboard    ⌥⌘C",
+            action: #selector(convertClipboard),
+            keyEquivalent: ""
+        )
         convertItem.target = self
         menu.addItem(convertItem)
 
         menu.addItem(.separator())
-        menu.addItem(withTitle: "About", action: #selector(showAbout), keyEquivalent: "").target = self
+
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
         menu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
         statusItem?.menu = menu
     }
 
-    // MARK: - Global Hotkey (⌥⌘C)
-
-    func setupHotkey() {
-        hotkeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            // keyCode 8 = C, combined with Option (⌥) + Command (⌘)
-            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if flags == [.option, .command] && event.keyCode == 8 {
-                DispatchQueue.main.async {
-                    self?.convertClipboard()
-                }
-            }
+    func updateMenuBarIcon(symbolName: String) {
+        if let button = statusItem?.button {
+            button.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "ClipFormat")
+            button.image?.isTemplate = true
         }
     }
 
-    // MARK: - Core Logic
+    // MARK: - Hotkey
+
+    func setupHotkey() {
+        hotkeyManager.register()
+        hotkeyManager.onActivate = { [weak self] in
+            self?.convertClipboard()
+        }
+    }
+
+    // MARK: - Core: Convert Clipboard
 
     @objc func convertClipboard() {
         let pasteboard = NSPasteboard.general
 
         guard let text = pasteboard.string(forType: .string), !text.isEmpty else {
-            flash("⚠️ No text")
+            flash(symbol: "exclamationmark.triangle", label: "⚠️ Empty", duration: 2)
             return
         }
 
-        guard let attributed = MarkdownConverter.convert(text) else {
-            flash("⚠️ Failed")
+        // Auto-detect: skip if no markdown found
+        if prefs.autoDetectMarkdown && !MarkdownConverter.looksLikeMarkdown(text) {
+            flash(symbol: "xmark.circle", label: "≠ MD", duration: 2)
+            notify(title: "ClipFormat", body: "No Markdown detected in clipboard.")
             return
         }
 
-        // Write RTF + plain text fallback to clipboard
-        pasteboard.clearContents()
+        let html = MarkdownConverter.toHTML(text)
 
-        let rtfData = try? attributed.data(
-            from: NSRange(location: 0, length: attributed.length),
-            documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]
-        )
-
-        if let rtf = rtfData {
-            pasteboard.setData(rtf, forType: .rtf)
+        guard let attributed = MarkdownConverter.htmlToAttributedString(html) else {
+            flash(symbol: "exclamationmark.triangle", label: "⚠️ Error", duration: 2)
+            return
         }
 
-        // Keep plain text as fallback (for apps that only accept plain text)
-        pasteboard.setString(text, forType: .string)
+        PasteboardWriter.write(html: html, attributed: attributed, plain: text)
 
-        flash("✅ Formatted!")
+        flash(symbol: "checkmark.circle.fill", label: "✅", duration: 2)
+        notify(title: "ClipFormat", body: "Clipboard formatted — press ⌘V to paste.")
+
+        if prefs.playSound {
+            NSSound(named: .init("Pop"))?.play()
+        }
     }
 
     // MARK: - UI Feedback
 
-    func flash(_ message: String) {
+    func flash(symbol: String, label: String, duration: TimeInterval) {
         guard let button = statusItem?.button else { return }
-        let original = button.image
-        button.image = nil
-        button.title = message
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            button.title = ""
-            button.image = original
+        let origImage = button.image
+
+        DispatchQueue.main.async {
+            button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            button.image?.isTemplate = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            button.image = origImage
         }
     }
 
-    @objc func showAbout() {
+    // MARK: - Notifications
+
+    func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    func notify(title: String, body: String) {
+        guard prefs.showNotification else { return }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        let req = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+    }
+
+    // MARK: - Settings
+
+    @objc func openSettings() {
         NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "ClipFormat"
-        alert.informativeText = "Converts Markdown (from ChatGPT, Claude, Gemini, etc.) to rich text on your clipboard.\n\nShortcut: ⌥⌘C\nThen paste normally with ⌘V."
-        alert.runModal()
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 }
