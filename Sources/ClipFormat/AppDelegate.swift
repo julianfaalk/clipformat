@@ -108,50 +108,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Core: Convert Clipboard
 
     @objc func convertClipboard() {
-        let pasteboard = NSPasteboard.general
+        let source = ClipboardReader.read()
 
-        guard let text = pasteboard.string(forType: .string), !text.isEmpty else {
+        // Empty clipboard
+        if case .empty = source {
             flash(symbol: "exclamationmark.triangle", label: "⚠️ Empty", duration: 2)
             return
         }
 
-        // Auto-detect: skip if no markdown found
-        if prefs.autoDetectMarkdown && !MarkdownConverter.looksLikeMarkdown(text) {
-            flash(symbol: "xmark.circle", label: "≠ MD", duration: 2)
-            notify(title: "ClipFormat", body: "No Markdown detected in clipboard.")
+        // Auto-detect: if plain text with no Markdown, skip unless user force-converts
+        if case .plainText = source, prefs.autoDetectMarkdown {
+            flash(symbol: "equal.circle", label: "Plain ✓", duration: 2)
+            notify(title: "ClipFormat", body: "Already plain text — no conversion needed.")
             return
         }
 
-        let html = MarkdownConverter.toHTML(text)
-
-        guard let attributed = MarkdownConverter.htmlToAttributedString(html) else {
+        guard let result = FormatBridge.convert(source: source) else {
             flash(symbol: "exclamationmark.triangle", label: "⚠️ Error", duration: 2)
             return
         }
 
-        // Preview mode: show window, let user confirm
+        // Preview mode
         if prefs.showPreview {
-            PreviewWindowController.show(original: text, html: html) { [weak self] in
+            PreviewWindowController.show(original: result.plain, html: result.html) { [weak self] in
                 guard let self else { return }
-                PasteboardWriter.write(html: html, attributed: attributed, plain: text)
-                ClipboardHistory.shared.add(original: text, html: html)
-                self.rebuildMenu()
-                self.flash(symbol: "checkmark.circle.fill", label: "✅", duration: 2)
-                if self.prefs.playSound { NSSound(named: .init("Pop"))?.play() }
+                self.applyResult(result)
             }
             return
         }
 
-        PasteboardWriter.write(html: html, attributed: attributed, plain: text)
-        ClipboardHistory.shared.add(original: text, html: html)
+        applyResult(result)
+    }
+
+    private func applyResult(_ result: FormatBridge.Result) {
+        PasteboardWriter.write(html: result.html, attributed: result.attributed, plain: result.plain)
+        ClipboardHistory.shared.add(original: result.plain, html: result.html)
         rebuildMenu()
-
-        flash(symbol: "checkmark.circle.fill", label: "✅", duration: 2)
-        notify(title: "ClipFormat", body: "Clipboard formatted — press ⌘V to paste.")
-
-        if prefs.playSound {
-            NSSound(named: .init("Pop"))?.play()
-        }
+        flash(symbol: "checkmark.circle.fill", label: result.sourceLabel, duration: 2)
+        notify(title: "ClipFormat", body: "\(result.sourceLabel) — press ⌘V to paste.")
+        if prefs.playSound { NSSound(named: .init("Pop"))?.play() }
     }
 
     // MARK: - UI Feedback
