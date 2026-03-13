@@ -18,6 +18,11 @@ final class PreferencesManager: ObservableObject {
 
     var shortcutLabel: String { "⌥⌘C" }
 
+    var launchAtLogin: Bool {
+        get { LaunchAtLoginManager.shared.isEnabled }
+        set { newValue ? LaunchAtLoginManager.shared.enable() : LaunchAtLoginManager.shared.disable() }
+    }
+
     private enum Keys {
         static let autoDetect   = "cf_autoDetectMarkdown"
         static let sound        = "cf_playSound"

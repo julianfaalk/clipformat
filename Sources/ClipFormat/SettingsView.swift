@@ -28,6 +28,8 @@ struct SettingsView: View {
             }
 
             Section {
+                LaunchAtLoginToggle()
+
                 Toggle("Auto-detect Markdown", isOn: $prefs.autoDetectMarkdown)
                     .help("Skip conversion if clipboard doesn't look like Markdown.")
 
@@ -68,6 +70,19 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 440)
         .padding(.vertical, 8)
+    }
+}
+
+/// Toggle that reads live SMAppService status (not @Published, so manual State).
+struct LaunchAtLoginToggle: View {
+    @State private var enabled = LaunchAtLoginManager.shared.isEnabled
+
+    var body: some View {
+        Toggle("Launch at Login", isOn: $enabled)
+            .onChange(of: enabled) { _, val in
+                val ? LaunchAtLoginManager.shared.enable()
+                    : LaunchAtLoginManager.shared.disable()
+            }
     }
 }
 
